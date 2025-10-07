@@ -1,0 +1,11 @@
+[project]
+name = "xoftr"
+description = "XoFTR is a cross-modal cross-view method for local feature matching between thermal infrared (TIR) and visible images."
+version = "1.0.0"
+# dynamic = ["dependencies"]
+
+# [tool.setuptools.dynamic]
+# dependencies = {file = ["requirements.txt"]} # Doesn't work for some reason due to the pip flag
+
+[tool.setuptools.packages.find]
+include = ["xoftr*"]
