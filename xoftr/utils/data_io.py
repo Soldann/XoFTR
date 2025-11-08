@@ -27,7 +27,7 @@ class DataIOWrapper(nn.Module):
         super().__init__()
 
         self.device = torch.device('cuda:{}'.format(0) if torch.cuda.is_available() else 'cpu')
-        torch.set_grad_enabled(False)
+        # torch.set_grad_enabled(False)
         self.model = model
         self.config = config
         self.img0_size = config['img0_resize'] 
@@ -109,19 +109,20 @@ class DataIOWrapper(nn.Module):
         return self.from_cv_imgs(img0, img1, K0=K0, K1=K1, dist0=dist0, dist1=dist1)
 
     def match_images(self, image0, image1, mask0, mask1):
-        batch = {'image0': image0, 'image1': image1}
-        if mask0 is not None:  # img_padding is True
-            if self.coarse_scale:
-                [ts_mask_0, ts_mask_1] = F.interpolate(torch.stack([mask0, mask1], dim=0)[None].float(),
-                                                       scale_factor=self.coarse_scale,
-                                                       mode='nearest',
-                                                       recompute_scale_factor=False)[0].bool()
-            batch.update({'mask0': ts_mask_0.unsqueeze(0), 'mask1': ts_mask_1.unsqueeze(0)})
-        self.model(batch)
-        mkpts0 = batch['mkpts0_f'].cpu().numpy()
-        mkpts1 = batch['mkpts1_f'].cpu().numpy()
-        mconf = batch['mconf_f'].cpu().numpy()
-        return mkpts0, mkpts1, mconf
+        with torch.no_grad():
+            batch = {'image0': image0, 'image1': image1}
+            if mask0 is not None:  # img_padding is True
+                if self.coarse_scale:
+                    [ts_mask_0, ts_mask_1] = F.interpolate(torch.stack([mask0, mask1], dim=0)[None].float(),
+                                                        scale_factor=self.coarse_scale,
+                                                        mode='nearest',
+                                                        recompute_scale_factor=False)[0].bool()
+                batch.update({'mask0': ts_mask_0.unsqueeze(0), 'mask1': ts_mask_1.unsqueeze(0)})
+            self.model(batch)
+            mkpts0 = batch['mkpts0_f'].cpu().numpy()
+            mkpts1 = batch['mkpts1_f'].cpu().numpy()
+            mconf = batch['mconf_f'].cpu().numpy()
+            return mkpts0, mkpts1, mconf
     
     def pad_bottom_right(self, inp, pad_size, ret_mask=False):
         assert isinstance(pad_size, int) and pad_size >= max(inp.shape[-2:]), f"{pad_size} < {max(inp.shape[-2:])}"
